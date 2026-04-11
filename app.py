@@ -151,7 +151,7 @@ if participant_name:
 
                 if selected_value == "- 選択してください -":
                     st.session_state.form_data[participant_name][racket][item] = None
-                    st.warning(f"⚠ 「{item}」は未入力です", icon="⚠️")
+                    st.warning(f"「{item}」は未入力です", icon="⚠️")
                 else:
                     st.session_state.form_data[participant_name][racket][item] = selected_value
 
