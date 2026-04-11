@@ -4,8 +4,8 @@ from datetime import datetime
 import pandas as pd
 import streamlit as st
 
-st.set_page_config(page_title="試打評価シート", layout="wide")
-st.title("試打評価シート")
+st.set_page_config(page_title="PURE PULSE 評価シート", layout="wide")
+st.title("PURE PULSE 評価シート")
 
 # ----------------------------
 # 1. マスターデータ
@@ -43,7 +43,7 @@ CSV_FILE = "racket_evaluation_data.csv"
 # ----------------------------
 # 2. 参加者名入力
 # ----------------------------
-participant_name = st.text_input("お名前を入力してください")
+participant_name = st.text_input("名前")
 
 if participant_name:
     st.write(f"入力者: {participant_name}")
@@ -113,7 +113,7 @@ def calculate_total_score(name, racket):
 # 5. 入力画面
 # ----------------------------
 if participant_name:
-    st.write("ラケットのタブを行き来しながら入力してください。")
+    st.write("それぞれのラケットタブで入力してください。")
     st.write("※ 総合点は11項目の平均点として自動計算されます。")
 
     # タブ名を作る
@@ -151,7 +151,6 @@ if participant_name:
 
                 if selected_value == "- 選択してください -":
                     st.session_state.form_data[participant_name][racket][item] = None
-                    st.warning(f"「{item}」は未入力です", icon="⚠️")
                 else:
                     st.session_state.form_data[participant_name][racket][item] = selected_value
 
@@ -255,4 +254,4 @@ if participant_name:
             st.success(f"{participant_name} さんのデータを上書き保存しました。")
 
 else:
-    st.info("先にお名前を入力してください。")
+    st.info("先に名前を入力してください。")
