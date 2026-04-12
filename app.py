@@ -128,7 +128,22 @@ if participant_name:
 
     for i, racket in enumerate(RACKETS):
         with tabs[i]:
-            st.subheader(racket)
+            st.markdown(
+                f"""
+                <div style="
+                    background-color:#f3f6fb;
+                    padding:12px 16px;
+                    border-radius:10px;
+                    font-size:24px;
+                    font-weight:bold;
+                    margin-bottom:12px;
+                    border:1px solid #d9e2f1;
+                ">
+                    {racket} を評価中
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
             data = st.session_state.form_data[participant_name][racket]
 
