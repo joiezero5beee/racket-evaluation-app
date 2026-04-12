@@ -274,6 +274,7 @@ if participant_name:
                 new_df.to_csv(CSV_FILE, index=False, encoding="utf-8-sig")
 
             st.session_state.confirm_score_one_save = False
+            st.write(f"保存先: {os.path.abspath(CSV_FILE)}")
             st.success(f"{participant_name} さんのデータを上書き保存しました。")
 
 else:
