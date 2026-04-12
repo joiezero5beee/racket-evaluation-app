@@ -1,6 +1,7 @@
 from datetime import datetime
 
 import pandas as pd
+import requests
 import streamlit as st
 
 
@@ -12,6 +13,14 @@ def load_css(file_name):
 st.set_page_config(page_title="試打評価シート", layout="wide")
 load_css("style.css")
 st.title("試打評価シート")
+
+# ----------------------------
+# 0. Apps Script URL
+# ----------------------------
+APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxZqoLH5ghTWj1ElSk9nG50h70dKE4uaVUrvBB2cfdpoEJ6PZ6lyjwX0dA5Y1HYoFJf/exec"
+
+# 例
+# APPS_SCRIPT_URL = "https://script.google.com/macros/s/XXXXXXXXXXXX/exec"
 
 # ----------------------------
 # 1. マスターデータ
@@ -28,7 +37,6 @@ RACKETS = [
     "GRAVITY",
 ]
 
-# 総合点を除く、手入力する11項目
 INPUT_ITEMS = [
     "第一印象（デザイン）",
     "打球感",
@@ -57,14 +65,14 @@ if participant_name:
 if "form_data" not in st.session_state:
     st.session_state.form_data = {}
 
-if "generated_csv_text" not in st.session_state:
-    st.session_state.generated_csv_text = None
-
-if "generated_csv_filename" not in st.session_state:
-    st.session_state.generated_csv_filename = None
+if "last_participant_name" not in st.session_state:
+    st.session_state.last_participant_name = None
 
 if "score_one_fields" not in st.session_state:
     st.session_state.score_one_fields = []
+
+if "ready_to_send" not in st.session_state:
+    st.session_state.ready_to_send = False
 
 if participant_name and participant_name not in st.session_state.form_data:
     st.session_state.form_data[participant_name] = {}
@@ -84,16 +92,10 @@ if participant_name and participant_name not in st.session_state.form_data:
             "コメント": "",
         }
 
-# 参加者名が変わったときに、前のCSV生成結果をクリア
-if "last_participant_name" not in st.session_state:
-    st.session_state.last_participant_name = None
-
 if participant_name != st.session_state.last_participant_name:
-    st.session_state.generated_csv_text = None
-    st.session_state.generated_csv_filename = None
     st.session_state.score_one_fields = []
+    st.session_state.ready_to_send = False
     st.session_state.last_participant_name = participant_name
-
 
 # ----------------------------
 # 4. 関数
@@ -114,7 +116,7 @@ def get_score_one_fields(name):
 def calculate_total_score(name, racket):
     """
     総合点を自動計算する。
-    今回は11項目の平均点を、小数1桁で返す。
+    11項目の平均点を、小数1桁で返す。
     """
     data = st.session_state.form_data[name][racket]
     values = [data[item] for item in INPUT_ITEMS if data[item] is not None]
@@ -126,7 +128,7 @@ def calculate_total_score(name, racket):
 
 
 def build_export_dataframe(name):
-    """CSV出力用のDataFrameを作る。"""
+    """送信用のDataFrameを作る。"""
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     rows = []
 
@@ -180,7 +182,6 @@ if participant_name:
 
             data = st.session_state.form_data[participant_name][racket]
 
-            # 11項目の入力欄
             for item in INPUT_ITEMS:
                 current_value = data[item]
                 key_name = f"{participant_name}_{racket}_{item}"
@@ -199,7 +200,6 @@ if participant_name:
 
                 st.session_state.form_data[participant_name][racket][item] = selected_value
 
-            # 総合点の自動表示
             total_score = calculate_total_score(participant_name, racket)
 
             st.markdown("### 総合点（自動計算）")
@@ -208,7 +208,6 @@ if participant_name:
             else:
                 st.success(f"総合点: {total_score}")
 
-            # コメント欄（任意）
             comment_key = f"{participant_name}_{racket}_comment"
             current_comment = data["コメント"]
 
@@ -227,7 +226,6 @@ if participant_name:
     # ----------------------------
     st.write("## 入力内容の確認")
 
-    # 点数確認用の表を作る
     score_table_data = {}
 
     for racket in RACKETS:
@@ -247,7 +245,6 @@ if participant_name:
     st.write("### 点数一覧")
     st.dataframe(score_df, use_container_width=True)
 
-    # コメント確認用の表を作る
     comment_rows = []
     for racket in RACKETS:
         data = st.session_state.form_data[participant_name][racket]
@@ -264,34 +261,41 @@ if participant_name:
     st.dataframe(comment_df, use_container_width=True)
 
     # ----------------------------
-    # 7. CSV作成・ダウンロード
+    # 7. 送信処理
     # ----------------------------
-    if st.button("CSVを作成する"):
-        export_df = build_export_dataframe(participant_name)
-
-        st.session_state.generated_csv_text = export_df.to_csv(index=False, encoding="utf-8-sig")
-        st.session_state.generated_csv_filename = f"{participant_name}_racket_evaluation.csv"
+    if st.button("回答を送信する"):
         st.session_state.score_one_fields = get_score_one_fields(participant_name)
+        st.session_state.ready_to_send = True
 
-    if st.session_state.generated_csv_text is not None:
+    if st.session_state.ready_to_send:
         if st.session_state.score_one_fields:
             st.warning("1点が入っている項目があります。意図した評価か確認してください。", icon="⚠️")
-
             st.write("### 1点の項目一覧")
             for racket, item in st.session_state.score_one_fields:
                 st.write(f"- {racket} / {item} → 評価しましたか？")
         else:
-            st.success("CSVを作成しました。")
+            st.success("送信内容を確認しました。")
 
-        st.write("### 次のステップ")
-        st.write("CSVをダウンロードして、管理者へメールで送信してください。")
+        if st.button("この内容で送信する"):
+            export_df = build_export_dataframe(participant_name)
 
-        st.download_button(
-            label="CSVをダウンロード",
-            data=st.session_state.generated_csv_text,
-            file_name=st.session_state.generated_csv_filename,
-            mime="text/csv",
-        )
+            payload = {
+                "rows": export_df.to_dict(orient="records")
+            }
+
+            try:
+                response = requests.post(APPS_SCRIPT_URL, json=payload, timeout=30)
+
+                if response.status_code == 200:
+                    st.success("回答を送信しました。ありがとうございました。")
+                    st.session_state.ready_to_send = False
+                    st.session_state.score_one_fields = []
+                else:
+                    st.error(f"送信に失敗しました。status_code: {response.status_code}")
+                    st.write(response.text)
+
+            except Exception as e:
+                st.error(f"送信エラー: {e}")
 
 else:
     st.info("名前を入力すると進みます。")
