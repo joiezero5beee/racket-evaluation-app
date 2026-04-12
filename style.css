@@ -1,25 +1,21 @@
 .sticky-racket-name {
-    position: sticky;
-    top: 0.5rem;
-    z-index: 999;
-    background-color: #f3f6fb;
-    padding: 10px 14px;
+    background-color: #eef4ff;
+    color: #ff7a00;
+    padding: 12px 16px;
     border-radius: 12px;
     font-size: 22px;
     font-weight: 700;
     line-height: 1.4;
-    margin-bottom: 14px;
-    border: 1px solid #d9e2f1;
+    margin: 4px 0 14px 0;
+    border: 1px solid #cfdcf6;
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
 }
 
-/* スマホでさらに見やすくする */
 @media (max-width: 768px) {
     .sticky-racket-name {
-        top: 0.25rem;
-        padding: 10px 12px;
         font-size: 20px;
+        padding: 11px 14px;
         border-radius: 10px;
-        margin-bottom: 12px;
+        margin: 4px 0 12px 0;
     }
 }
