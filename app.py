@@ -229,7 +229,7 @@ if participant_name:
 
             st.write("### 1点の項目一覧")
             for racket, item in score_one_fields:
-                st.write(f"- {racket} / {item} → 「1」ですが、評価しましたか？")
+                st.write(f"- {racket} / {item} → 評価しましたか？")
 
         else:
             rows = []
