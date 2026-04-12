@@ -9,9 +9,9 @@ def load_css(file_name):
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
 
-st.set_page_config(page_title="PURE PULSE 評価シート", layout="wide")
+st.set_page_config(page_title="試打評価シート", layout="wide")
 load_css("style.css")
-st.title("PURE PULSE 評価シート")
+st.title("試打評価シート")
 
 # ----------------------------
 # 1. マスターデータ
@@ -279,7 +279,7 @@ if participant_name:
 
             st.write("### 1点の項目一覧")
             for racket, item in st.session_state.score_one_fields:
-                st.write(f"- {racket} / {item} → 「1」ですが、評価しましたか？")
+                st.write(f"- {racket} / {item} → 評価しましたか？")
         else:
             st.success("CSVを作成しました。")
 
@@ -294,4 +294,4 @@ if participant_name:
         )
 
 else:
-    st.info("先に名前を入力してください。")
+    st.info("名前を入力すると進みます。")
