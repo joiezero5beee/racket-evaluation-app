@@ -181,20 +181,42 @@ if participant_name:
     # 6. 確認表示
     # ----------------------------
     st.write("## 入力内容の確認")
+
+    # 点数確認用の表を作る
+    score_table_data = {}
+
     for racket in RACKETS:
-        with st.expander(f"{racket} の内容を見る"):
-            data = st.session_state.form_data[participant_name][racket]
+        data = st.session_state.form_data[participant_name][racket]
 
-            for item in INPUT_ITEMS:
-                value = data[item] if data[item] is not None else "未入力"
-                st.write(f"{item}: {value}")
+        racket_scores = {}
+        for item in INPUT_ITEMS:
+            racket_scores[item] = data[item] if data[item] is not None else "未入力"
 
-            total_score = calculate_total_score(participant_name, racket)
-            total_display = total_score if total_score is not None else "未計算"
-            st.write(f"総合点: {total_display}")
+        total_score = calculate_total_score(participant_name, racket)
+        racket_scores["総合点"] = total_score if total_score is not None else "未計算"
 
-            comment_value = data["コメント"] if data["コメント"].strip() != "" else "未入力（任意）"
-            st.write(f"コメント: {comment_value}")
+        score_table_data[racket] = racket_scores
+
+    score_df = pd.DataFrame(score_table_data)
+
+    st.write("### 点数一覧")
+    st.dataframe(score_df, use_container_width=True)
+
+    # コメント確認用の表を作る
+    comment_rows = []
+    for racket in RACKETS:
+        data = st.session_state.form_data[participant_name][racket]
+        comment_rows.append(
+            {
+                "ラケット": racket,
+                "コメント": data["コメント"] if data["コメント"].strip() != "" else "",
+            }
+        )
+
+    comment_df = pd.DataFrame(comment_rows)
+
+    st.write("### コメント一覧")
+    st.dataframe(comment_df, use_container_width=True)
 
     # ----------------------------
     # 7. CSV保存処理
