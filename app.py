@@ -4,13 +4,15 @@ from datetime import datetime
 import pandas as pd
 import streamlit as st
 
+
 def load_css(file_name):
     with open(file_name, encoding="utf-8") as f:
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
-st.set_page_config(page_title="PURE PULSE 評価シート", layout="wide")
+
+st.set_page_config(page_title="試打評価シート", layout="wide")
 load_css("style.css")
-st.title("PURE PULSE 評価シート")
+st.title("試打評価シート")
 
 # ----------------------------
 # 1. マスターデータ
@@ -42,7 +44,6 @@ INPUT_ITEMS = [
     "打球音",
 ]
 
-SCORE_OPTIONS = ["- 選択してください -"] + list(range(1, 11))
 CSV_FILE = "racket_evaluation_data.csv"
 
 # ----------------------------
@@ -58,6 +59,9 @@ if participant_name:
 # ----------------------------
 if "form_data" not in st.session_state:
     st.session_state.form_data = {}
+
+if "confirm_score_one_save" not in st.session_state:
+    st.session_state.confirm_score_one_save = False
 
 if participant_name and participant_name not in st.session_state.form_data:
     st.session_state.form_data[participant_name] = {}
@@ -80,37 +84,30 @@ if participant_name and participant_name not in st.session_state.form_data:
 # ----------------------------
 # 4. 関数
 # ----------------------------
-def get_missing_fields(name):
-    """未入力の項目一覧を返す。コメントは任意なのでチェックしない。"""
-    missing_fields = []
+def get_score_one_fields(name):
+    """1点が入っている項目一覧を返す。"""
+    score_one_fields = []
 
     for racket in RACKETS:
         data = st.session_state.form_data[name][racket]
         for item in INPUT_ITEMS:
-            if data[item] is None:
-                missing_fields.append((racket, item))
+            if data[item] == 1:
+                score_one_fields.append((racket, item))
 
-    return missing_fields
-
-
-def is_racket_complete(name, racket):
-    """そのラケットの11項目が全部埋まっているか"""
-    data = st.session_state.form_data[name][racket]
-    return all(data[item] is not None for item in INPUT_ITEMS)
+    return score_one_fields
 
 
 def calculate_total_score(name, racket):
     """
     総合点を自動計算する。
     今回は11項目の平均点を、小数1桁で返す。
-    1つでも未入力があれば None を返す。
     """
     data = st.session_state.form_data[name][racket]
+    values = [data[item] for item in INPUT_ITEMS if data[item] is not None]
 
-    if not all(data[item] is not None for item in INPUT_ITEMS):
+    if len(values) != len(INPUT_ITEMS):
         return None
 
-    values = [data[item] for item in INPUT_ITEMS]
     return round(sum(values) / len(values), 1)
 
 
@@ -120,16 +117,9 @@ def calculate_total_score(name, racket):
 if participant_name:
     st.write("それぞれのラケットタブで入力してください。")
     st.write("※ 総合点は11項目の平均点として自動計算されます。")
+    st.write("※ 1〜10をスライダーで選択してください。")
 
-    # タブ名を作る
-    tab_labels = []
-    for racket in RACKETS:
-        if is_racket_complete(participant_name, racket):
-            tab_labels.append(f"{racket} ✅")
-        else:
-            tab_labels.append(f"{racket} *")
-
-    tabs = st.tabs(tab_labels)
+    tabs = st.tabs(RACKETS)
 
     for i, racket in enumerate(RACKETS):
         with tabs[i]:
@@ -150,21 +140,18 @@ if participant_name:
                 key_name = f"{participant_name}_{racket}_{item}"
 
                 if current_value is None:
-                    default_index = 0
+                    slider_value = 1
                 else:
-                    default_index = SCORE_OPTIONS.index(current_value)
+                    slider_value = current_value
 
-                selected_value = st.selectbox(
+                selected_value = st.select_slider(
                     item,
-                    SCORE_OPTIONS,
-                    index=default_index,
+                    options=list(range(1, 11)),
+                    value=slider_value,
                     key=key_name,
                 )
 
-                if selected_value == "- 選択してください -":
-                    st.session_state.form_data[participant_name][racket][item] = None
-                else:
-                    st.session_state.form_data[participant_name][racket][item] = selected_value
+                st.session_state.form_data[participant_name][racket][item] = selected_value
 
             # 総合点の自動表示
             total_score = calculate_total_score(participant_name, racket)
@@ -192,7 +179,6 @@ if participant_name:
     # ----------------------------
     # 6. 確認表示
     # ----------------------------
-
     st.write("## 入力内容の確認")
 
     # 点数確認用の表を作る
@@ -203,10 +189,10 @@ if participant_name:
 
         racket_scores = {}
         for item in INPUT_ITEMS:
-            racket_scores[item] = data[item] if data[item] is not None else "未入力"
+            racket_scores[item] = data[item] if data[item] is not None else ""
 
         total_score = calculate_total_score(participant_name, racket)
-        racket_scores["総合点"] = total_score if total_score is not None else "未計算"
+        racket_scores["総合点"] = total_score if total_score is not None else ""
 
         score_table_data[racket] = racket_scores
 
@@ -235,14 +221,15 @@ if participant_name:
     # 7. CSV保存処理
     # ----------------------------
     if st.button("CSVに保存"):
-        missing_fields = get_missing_fields(participant_name)
+        score_one_fields = get_score_one_fields(participant_name)
 
-        if missing_fields:
-            st.error("未入力の項目があります。すべて入力してから保存してください。")
+        if score_one_fields and not st.session_state.confirm_score_one_save:
+            st.session_state.confirm_score_one_save = True
+            st.warning("1点が入っている項目があります。意図した評価か確認してください。", icon="⚠️")
 
-            st.write("### 未入力一覧")
-            for racket, item in missing_fields:
-                st.write(f"- {racket} / {item}")
+            st.write("### 1点の項目一覧")
+            for racket, item in score_one_fields:
+                st.write(f"- {racket} / {item} → 「1」ですが、評価しましたか？")
 
         else:
             rows = []
@@ -286,6 +273,7 @@ if participant_name:
             else:
                 new_df.to_csv(CSV_FILE, index=False, encoding="utf-8-sig")
 
+            st.session_state.confirm_score_one_save = False
             st.success(f"{participant_name} さんのデータを上書き保存しました。")
 
 else:
