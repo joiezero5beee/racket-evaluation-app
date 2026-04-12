@@ -1,4 +1,3 @@
-import os
 from datetime import datetime
 
 import pandas as pd
@@ -10,9 +9,9 @@ def load_css(file_name):
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
 
-st.set_page_config(page_title="試打評価シート", layout="wide")
+st.set_page_config(page_title="PURE PULSE 評価シート", layout="wide")
 load_css("style.css")
-st.title("試打評価シート")
+st.title("PURE PULSE 評価シート")
 
 # ----------------------------
 # 1. マスターデータ
@@ -44,8 +43,6 @@ INPUT_ITEMS = [
     "打球音",
 ]
 
-CSV_FILE = "racket_evaluation_data.csv"
-
 # ----------------------------
 # 2. 参加者名入力
 # ----------------------------
@@ -60,8 +57,14 @@ if participant_name:
 if "form_data" not in st.session_state:
     st.session_state.form_data = {}
 
-if "confirm_score_one_save" not in st.session_state:
-    st.session_state.confirm_score_one_save = False
+if "generated_csv_text" not in st.session_state:
+    st.session_state.generated_csv_text = None
+
+if "generated_csv_filename" not in st.session_state:
+    st.session_state.generated_csv_filename = None
+
+if "score_one_fields" not in st.session_state:
+    st.session_state.score_one_fields = []
 
 if participant_name and participant_name not in st.session_state.form_data:
     st.session_state.form_data[participant_name] = {}
@@ -81,20 +84,31 @@ if participant_name and participant_name not in st.session_state.form_data:
             "コメント": "",
         }
 
+# 参加者名が変わったときに、前のCSV生成結果をクリア
+if "last_participant_name" not in st.session_state:
+    st.session_state.last_participant_name = None
+
+if participant_name != st.session_state.last_participant_name:
+    st.session_state.generated_csv_text = None
+    st.session_state.generated_csv_filename = None
+    st.session_state.score_one_fields = []
+    st.session_state.last_participant_name = participant_name
+
+
 # ----------------------------
 # 4. 関数
 # ----------------------------
 def get_score_one_fields(name):
     """1点が入っている項目一覧を返す。"""
-    score_one_fields = []
+    score_one_items = []
 
     for racket in RACKETS:
         data = st.session_state.form_data[name][racket]
         for item in INPUT_ITEMS:
             if data[item] == 1:
-                score_one_fields.append((racket, item))
+                score_one_items.append((racket, item))
 
-    return score_one_fields
+    return score_one_items
 
 
 def calculate_total_score(name, racket):
@@ -109,6 +123,38 @@ def calculate_total_score(name, racket):
         return None
 
     return round(sum(values) / len(values), 1)
+
+
+def build_export_dataframe(name):
+    """CSV出力用のDataFrameを作る。"""
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    rows = []
+
+    for racket in RACKETS:
+        data = st.session_state.form_data[name][racket]
+        total_score = calculate_total_score(name, racket)
+
+        row = {
+            "timestamp": now,
+            "participant_name": name,
+            "racket": racket,
+            "第一印象（デザイン）": data["第一印象（デザイン）"],
+            "打球感": data["打球感"],
+            "振動吸収性": data["振動吸収性"],
+            "振り抜き": data["振り抜き"],
+            "ボールの乗り感": data["ボールの乗り感"],
+            "面の安定性": data["面の安定性"],
+            "パワー性能": data["パワー性能"],
+            "スピン性能": data["スピン性能"],
+            "コントロール性能": data["コントロール性能"],
+            "スイートエリアの広さ": data["スイートエリアの広さ"],
+            "打球音": data["打球音"],
+            "総合点": total_score,
+            "コメント": data["コメント"],
+        }
+        rows.append(row)
+
+    return pd.DataFrame(rows)
 
 
 # ----------------------------
@@ -218,64 +264,34 @@ if participant_name:
     st.dataframe(comment_df, use_container_width=True)
 
     # ----------------------------
-    # 7. CSV保存処理
+    # 7. CSV作成・ダウンロード
     # ----------------------------
-    if st.button("CSVに保存"):
-        score_one_fields = get_score_one_fields(participant_name)
+    if st.button("CSVを作成する"):
+        export_df = build_export_dataframe(participant_name)
 
-        if score_one_fields and not st.session_state.confirm_score_one_save:
-            st.session_state.confirm_score_one_save = True
+        st.session_state.generated_csv_text = export_df.to_csv(index=False, encoding="utf-8-sig")
+        st.session_state.generated_csv_filename = f"{participant_name}_racket_evaluation.csv"
+        st.session_state.score_one_fields = get_score_one_fields(participant_name)
+
+    if st.session_state.generated_csv_text is not None:
+        if st.session_state.score_one_fields:
             st.warning("1点が入っている項目があります。意図した評価か確認してください。", icon="⚠️")
 
             st.write("### 1点の項目一覧")
-            for racket, item in score_one_fields:
-                st.write(f"- {racket} / {item} → 評価しましたか？")
-
+            for racket, item in st.session_state.score_one_fields:
+                st.write(f"- {racket} / {item} → 「1」ですが、評価しましたか？")
         else:
-            rows = []
-            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            st.success("CSVを作成しました。")
 
-            for racket in RACKETS:
-                data = st.session_state.form_data[participant_name][racket]
-                total_score = calculate_total_score(participant_name, racket)
+        st.write("### 次のステップ")
+        st.write("CSVをダウンロードして、管理者へメールで送信してください。")
 
-                row = {
-                    "timestamp": now,
-                    "participant_name": participant_name,
-                    "racket": racket,
-                    "第一印象（デザイン）": data["第一印象（デザイン）"],
-                    "打球感": data["打球感"],
-                    "振動吸収性": data["振動吸収性"],
-                    "振り抜き": data["振り抜き"],
-                    "ボールの乗り感": data["ボールの乗り感"],
-                    "面の安定性": data["面の安定性"],
-                    "パワー性能": data["パワー性能"],
-                    "スピン性能": data["スピン性能"],
-                    "コントロール性能": data["コントロール性能"],
-                    "スイートエリアの広さ": data["スイートエリアの広さ"],
-                    "打球音": data["打球音"],
-                    "総合点": total_score,
-                    "コメント": data["コメント"],
-                }
-                rows.append(row)
-
-            new_df = pd.DataFrame(rows)
-
-            # 同じ名前の既存データを削除してから保存
-            if os.path.exists(CSV_FILE):
-                existing_df = pd.read_csv(CSV_FILE, encoding="utf-8-sig")
-
-                if "participant_name" in existing_df.columns:
-                    existing_df = existing_df[existing_df["participant_name"] != participant_name]
-
-                combined_df = pd.concat([existing_df, new_df], ignore_index=True)
-                combined_df.to_csv(CSV_FILE, index=False, encoding="utf-8-sig")
-            else:
-                new_df.to_csv(CSV_FILE, index=False, encoding="utf-8-sig")
-
-            st.session_state.confirm_score_one_save = False
-            st.write(f"保存先: {os.path.abspath(CSV_FILE)}")
-            st.success(f"{participant_name} さんのデータを上書き保存しました。")
+        st.download_button(
+            label="CSVをダウンロード",
+            data=st.session_state.generated_csv_text,
+            file_name=st.session_state.generated_csv_filename,
+            mime="text/csv",
+        )
 
 else:
     st.info("先に名前を入力してください。")
