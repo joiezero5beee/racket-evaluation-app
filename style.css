@@ -1,0 +1,25 @@
+.sticky-racket-name {
+    position: sticky;
+    top: 0.5rem;
+    z-index: 999;
+    background-color: #f3f6fb;
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.4;
+    margin-bottom: 14px;
+    border: 1px solid #d9e2f1;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+/* スマホでさらに見やすくする */
+@media (max-width: 768px) {
+    .sticky-racket-name {
+        top: 0.25rem;
+        padding: 10px 12px;
+        font-size: 20px;
+        border-radius: 10px;
+        margin-bottom: 12px;
+    }
+}

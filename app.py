@@ -4,7 +4,12 @@ from datetime import datetime
 import pandas as pd
 import streamlit as st
 
+def load_css(file_name):
+    with open(file_name, encoding="utf-8") as f:
+        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+
 st.set_page_config(page_title="PURE PULSE 評価シート", layout="wide")
+load_css("style.css")
 st.title("PURE PULSE 評価シート")
 
 # ----------------------------
@@ -130,15 +135,7 @@ if participant_name:
         with tabs[i]:
             st.markdown(
                 f"""
-                <div style="
-                    background-color:#f3f6fb;
-                    padding:12px 16px;
-                    border-radius:10px;
-                    font-size:24px;
-                    font-weight:bold;
-                    margin-bottom:12px;
-                    border:1px solid #d9e2f1;
-                ">
+                <div class="sticky-racket-name">
                     {racket} を評価中
                 </div>
                 """,
@@ -195,6 +192,7 @@ if participant_name:
     # ----------------------------
     # 6. 確認表示
     # ----------------------------
+
     st.write("## 入力内容の確認")
 
     # 点数確認用の表を作る
