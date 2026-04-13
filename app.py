@@ -58,13 +58,14 @@ HIGHLIGHT_ITEMS = {
     "スイートエリアの広さ",
 }
 
-# タブ内ラベルの文字色
-HIGHLIGHT_COLOR = "#d32f2f"
-
 # 点数一覧の行ハイライト
 # ライト/ダーク両対応を意識して、強すぎない半透明背景 + 左アクセント
 TABLE_HIGHLIGHT_BG = "rgba(255, 196, 0, 0.16)"
 TABLE_HIGHLIGHT_BORDER = "#ffb300"
+
+# 評価項目ラベル用CSSクラス
+HIGHLIGHT_LABEL_CLASS = "highlight-item-label"
+NORMAL_LABEL_CLASS = "normal-item-label"
 
 
 # ----------------------------
@@ -178,35 +179,17 @@ def build_export_dataframe(name):
 
 
 def render_item_label(item):
-    """指定項目のみ文字色を変えて表示する。"""
-    if item in HIGHLIGHT_ITEMS:
-        st.markdown(
-            f"""
-            <div style="
-                color: {HIGHLIGHT_COLOR};
-                font-weight: 700;
-                margin-top: 0.35rem;
-                margin-bottom: 0.2rem;
-            ">
-                {item}
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-    else:
-        st.markdown(
-            f"""
-            <div style="
-                color: inherit;
-                font-weight: 600;
-                margin-top: 0.35rem;
-                margin-bottom: 0.2rem;
-            ">
-                {item}
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+    """指定項目のみCSSクラスで文字色を変えて表示する。"""
+    label_class = HIGHLIGHT_LABEL_CLASS if item in HIGHLIGHT_ITEMS else NORMAL_LABEL_CLASS
+
+    st.markdown(
+        f"""
+        <div class="{label_class}">
+            {item}
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def highlight_score_table_rows(df):
