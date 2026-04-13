@@ -212,6 +212,31 @@ def highlight_score_table_rows(df):
     return pd.DataFrame(styles, index=df.index, columns=df.columns)
 
 
+def format_score_table_display(df):
+    """
+    点数一覧の表示用に整形する。
+    - 総合点: 小数第1位まで
+    - その他: 整数表示
+    - 空欄は空欄のまま
+    """
+    display_df = df.copy()
+
+    for idx in display_df.index:
+        for col in display_df.columns:
+            value = display_df.at[idx, col]
+
+            if value == "" or pd.isna(value):
+                display_df.at[idx, col] = ""
+                continue
+
+            if idx == "総合点":
+                display_df.at[idx, col] = f"{float(value):.1f}"
+            else:
+                display_df.at[idx, col] = f"{int(round(float(value)))}"
+
+    return display_df
+
+
 # ----------------------------
 # 5. 入力画面
 # ----------------------------
@@ -262,7 +287,7 @@ if participant_name:
             if total_score is None:
                 st.info("11項目がすべて入力されると、自動で総合点が表示されます。")
             else:
-                st.success(f"総合点: {total_score}")
+                st.success(f"総合点: {total_score:.1f}")
 
             comment_key = f"{participant_name}_{racket}_comment"
             current_comment = data["コメント"]
@@ -297,9 +322,10 @@ if participant_name:
         score_table_data[racket] = racket_scores
 
     score_df = pd.DataFrame(score_table_data)
+    display_score_df = format_score_table_display(score_df)
 
     st.write("### 点数一覧")
-    styled_score_df = score_df.style.apply(highlight_score_table_rows, axis=None)
+    styled_score_df = display_score_df.style.apply(highlight_score_table_rows, axis=None)
     st.dataframe(styled_score_df, use_container_width=True)
 
     comment_rows = []
