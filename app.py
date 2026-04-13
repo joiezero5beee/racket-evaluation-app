@@ -219,7 +219,7 @@ def format_score_table_display(df):
     - その他: 整数表示
     - 空欄は空欄のまま
     """
-    display_df = df.copy()
+    display_df = df.copy().astype(object)
 
     for idx in display_df.index:
         for col in display_df.columns:
@@ -232,7 +232,7 @@ def format_score_table_display(df):
             if idx == "総合点":
                 display_df.at[idx, col] = f"{float(value):.1f}"
             else:
-                display_df.at[idx, col] = f"{int(round(float(value)))}"
+                display_df.at[idx, col] = f"{int(float(value))}"
 
     return display_df
 
