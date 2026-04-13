@@ -19,9 +19,6 @@ st.title("試打評価シート")
 # ----------------------------
 APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxZqoLH5ghTWj1ElSk9nG50h70dKE4uaVUrvBB2cfdpoEJ6PZ6lyjwX0dA5Y1HYoFJf/exec"
 
-# 例
-# APPS_SCRIPT_URL = "https://script.google.com/macros/s/XXXXXXXXXXXX/exec"
-
 # ----------------------------
 # 1. マスターデータ
 # ----------------------------
@@ -51,6 +48,25 @@ INPUT_ITEMS = [
     "打球音",
 ]
 
+# 文字色変更＆点数一覧でハイライトする項目
+HIGHLIGHT_ITEMS = {
+    "第一印象（デザイン）",
+    "打球感",
+    "振動吸収性",
+    "パワー性能",
+    "コントロール性能",
+    "スイートエリアの広さ",
+}
+
+# タブ内ラベルの文字色
+HIGHLIGHT_COLOR = "#d32f2f"
+
+# 点数一覧の行ハイライト
+# ライト/ダーク両対応を意識して、強すぎない半透明背景 + 左アクセント
+TABLE_HIGHLIGHT_BG = "rgba(255, 196, 0, 0.16)"
+TABLE_HIGHLIGHT_BORDER = "#ffb300"
+
+
 # ----------------------------
 # 2. 参加者名入力
 # ----------------------------
@@ -58,6 +74,7 @@ participant_name = st.text_input("名前")
 
 if participant_name:
     st.write(f"入力者: {participant_name}")
+
 
 # ----------------------------
 # 3. session_stateの初期化
@@ -96,6 +113,7 @@ if participant_name != st.session_state.last_participant_name:
     st.session_state.score_one_fields = []
     st.session_state.ready_to_send = False
     st.session_state.last_participant_name = participant_name
+
 
 # ----------------------------
 # 4. 関数
@@ -159,6 +177,58 @@ def build_export_dataframe(name):
     return pd.DataFrame(rows)
 
 
+def render_item_label(item):
+    """指定項目のみ文字色を変えて表示する。"""
+    if item in HIGHLIGHT_ITEMS:
+        st.markdown(
+            f"""
+            <div style="
+                color: {HIGHLIGHT_COLOR};
+                font-weight: 700;
+                margin-top: 0.35rem;
+                margin-bottom: 0.2rem;
+            ">
+                {item}
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(
+            f"""
+            <div style="
+                color: inherit;
+                font-weight: 600;
+                margin-top: 0.35rem;
+                margin-bottom: 0.2rem;
+            ">
+                {item}
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+
+def highlight_score_table_rows(df):
+    """
+    点数一覧のうち、指定項目の行だけ見やすくハイライトする。
+    ライト/ダーク両モードを考慮し、半透明背景 + 左ボーダー + 太字で強調。
+    """
+    styles = []
+    for idx in df.index:
+        if idx in HIGHLIGHT_ITEMS:
+            row_style = [
+                f"background-color: {TABLE_HIGHLIGHT_BG}; "
+                f"font-weight: 700; "
+                f"border-left: 4px solid {TABLE_HIGHLIGHT_BORDER};"
+            ] * len(df.columns)
+        else:
+            row_style = [""] * len(df.columns)
+        styles.append(row_style)
+
+    return pd.DataFrame(styles, index=df.index, columns=df.columns)
+
+
 # ----------------------------
 # 5. 入力画面
 # ----------------------------
@@ -191,11 +261,14 @@ if participant_name:
                 else:
                     slider_value = current_value
 
+                render_item_label(item)
+
                 selected_value = st.select_slider(
-                    item,
+                    label=f"{item}_slider",
                     options=list(range(1, 11)),
                     value=slider_value,
                     key=key_name,
+                    label_visibility="collapsed",
                 )
 
                 st.session_state.form_data[participant_name][racket][item] = selected_value
@@ -243,7 +316,8 @@ if participant_name:
     score_df = pd.DataFrame(score_table_data)
 
     st.write("### 点数一覧")
-    st.dataframe(score_df, use_container_width=True)
+    styled_score_df = score_df.style.apply(highlight_score_table_rows, axis=None)
+    st.dataframe(styled_score_df, use_container_width=True)
 
     comment_rows = []
     for racket in RACKETS:
