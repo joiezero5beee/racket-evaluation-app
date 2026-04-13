@@ -139,9 +139,13 @@ def show_item_label(item):
 
 
 def highlight_rows(row):
-    """一覧表で、指定した項目の行全体をハイライトする。"""
+    """一覧表で、指定した項目の行全体を見やすくハイライトする。"""
     if row.name in HIGHLIGHT_ITEMS:
-        return ["background-color: #fff4e6; font-weight: 700;"] * len(row)
+        return [
+            "background-color: rgba(255, 122, 0, 0.12); "
+            "font-weight: 700; "
+            "border-left: 4px solid #ff7a00;"
+        ] * len(row)
     return [""] * len(row)
 
 
@@ -291,7 +295,22 @@ if participant_name:
     score_df = pd.DataFrame(score_table_data)
 
     st.write("### 点数一覧")
-    styled_score_df = score_df.style.apply(highlight_rows, axis=1)
+
+    # 表示用にコピーを作る
+    display_score_df = score_df.copy()
+
+    # 通常項目は整数表示にする
+    for item in INPUT_ITEMS:
+        display_score_df.loc[item] = display_score_df.loc[item].apply(
+            lambda x: "" if x == "" else int(x)
+        )
+
+    # 総合点だけ小数第1位で表示する
+    display_score_df.loc["総合点"] = display_score_df.loc["総合点"].apply(
+        lambda x: "" if x == "" else f"{float(x):.1f}"
+    )
+
+    styled_score_df = display_score_df.style.apply(highlight_rows, axis=1)
     st.dataframe(styled_score_df, use_container_width=True)
 
     comment_rows = []
