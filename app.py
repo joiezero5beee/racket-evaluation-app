@@ -19,6 +19,9 @@ st.title("試打評価シート")
 # ----------------------------
 APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxZqoLH5ghTWj1ElSk9nG50h70dKE4uaVUrvBB2cfdpoEJ6PZ6lyjwX0dA5Y1HYoFJf/exec"
 
+# 例
+# APPS_SCRIPT_URL = "https://script.google.com/macros/s/XXXXXXXXXXXX/exec"
+
 # ----------------------------
 # 1. マスターデータ
 # ----------------------------
@@ -47,16 +50,6 @@ INPUT_ITEMS = [
     "スイートエリアの広さ",
     "打球音",
 ]
-
-# 目立たせたい項目
-HIGHLIGHT_ITEMS = {
-    "第一印象（デザイン）",
-    "打球感",
-    "振動吸収性",
-    "パワー性能",
-    "コントロール性能",
-    "スイートエリアの広さ",
-}
 
 # ----------------------------
 # 2. 参加者名入力
@@ -105,50 +98,8 @@ if participant_name != st.session_state.last_participant_name:
     st.session_state.last_participant_name = participant_name
 
 # ----------------------------
-# 4. 表示用・計算用の関数
+# 4. 関数
 # ----------------------------
-def show_item_label(item):
-    """タブ内の項目名を、指定項目だけ色付き太字で表示する。"""
-    if item in HIGHLIGHT_ITEMS:
-        st.markdown(
-            f"""
-            <div style="
-                color: #d9480f;
-                font-weight: 700;
-                font-size: 1.05rem;
-                margin: 10px 0 2px 0;
-            ">
-                {item}
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-    else:
-        st.markdown(
-            f"""
-            <div style="
-                font-weight: 500;
-                font-size: 1.05rem;
-                margin: 10px 0 2px 0;
-            ">
-                {item}
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-
-def highlight_rows(row):
-    """一覧表で、指定した項目の行全体を見やすくハイライトする。"""
-    if row.name in HIGHLIGHT_ITEMS:
-        return [
-            "background-color: rgba(255, 122, 0, 0.12); "
-            "font-weight: 700; "
-            "border-left: 4px solid #ff7a00;"
-        ] * len(row)
-    return [""] * len(row)
-
-
 def get_score_one_fields(name):
     """1点が入っている項目一覧を返す。"""
     score_one_items = []
@@ -207,6 +158,7 @@ def build_export_dataframe(name):
 
     return pd.DataFrame(rows)
 
+
 # ----------------------------
 # 5. 入力画面
 # ----------------------------
@@ -239,15 +191,11 @@ if participant_name:
                 else:
                     slider_value = current_value
 
-                # 項目名を先に表示
-                show_item_label(item)
-
                 selected_value = st.select_slider(
-                    label=f"{item}_slider",
+                    item,
                     options=list(range(1, 11)),
                     value=slider_value,
                     key=key_name,
-                    label_visibility="collapsed",
                 )
 
                 st.session_state.form_data[participant_name][racket][item] = selected_value
@@ -295,23 +243,7 @@ if participant_name:
     score_df = pd.DataFrame(score_table_data)
 
     st.write("### 点数一覧")
-
-    # 表示用にコピーを作る
-    display_score_df = score_df.copy()
-
-    # 通常項目は整数表示にする
-    for item in INPUT_ITEMS:
-        display_score_df.loc[item] = display_score_df.loc[item].apply(
-            lambda x: "" if x == "" else int(x)
-        )
-
-    # 総合点だけ小数第1位で表示する
-    display_score_df.loc["総合点"] = display_score_df.loc["総合点"].apply(
-        lambda x: "" if x == "" else f"{float(x):.1f}"
-    )
-
-    styled_score_df = display_score_df.style.apply(highlight_rows, axis=1)
-    st.dataframe(styled_score_df, use_container_width=True)
+    st.dataframe(score_df, use_container_width=True)
 
     comment_rows = []
     for racket in RACKETS:
